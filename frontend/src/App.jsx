@@ -1,6 +1,8 @@
 import { useState, useRef, useCallback } from "react";
+import { supabase } from "./supabase";
 
 const API_URL = "https://sonic-collider-production.up.railway.app";
+
 const PRESETS = [
   { id: "bell", label: "🔔 Bell" },
   { id: "rain", label: "🌧 Rain" },
@@ -11,7 +13,8 @@ const PRESETS = [
   { id: "piano", label: "🎹 Piano" },
   { id: "clap", label: "👏 Clap" },
 ];
-function WaveformDisplay({ audioUrl, label }) {
+
+function WaveformDisplay({ audioUrl }) {
   const canvasRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef(null);
@@ -80,11 +83,7 @@ function WaveformDisplay({ audioUrl, label }) {
             style={{ width: "100%", borderRadius: 6, display: "block", cursor: "pointer" }}
             onClick={() => drawWaveform(audioUrl)}
           />
-          <audio
-            ref={audioRef}
-            src={audioUrl}
-            onEnded={() => setIsPlaying(false)}
-          />
+          <audio ref={audioRef} src={audioUrl} onEnded={() => setIsPlaying(false)} />
           <button onClick={togglePlay} style={styles.playBtn}>
             {isPlaying ? "⏹ Stop" : "▶ Play"}
           </button>
@@ -181,7 +180,7 @@ function UploadZone({ label, file, onFile }) {
   );
 }
 
-export default function App() {
+export default function App({ session }) {
   const [fileA, setFileA] = useState(null);
   const [fileB, setFileB] = useState(null);
   const [mode, setMode] = useState("multiply");
@@ -241,50 +240,30 @@ export default function App() {
     a.click();
   };
 
-  const downloadMp3 = async () => {
-    if (!fileA || !fileB) return;
-    setLoading(true);
-    const formData = new FormData();
-    formData.append("sound_a", fileA);
-    formData.append("sound_b", fileB);
-    formData.append("mode", mode);
-    formData.append("blend_amount", blendAmount);
-    formData.append("duration", duration);
-
-    try {
-      const res = await fetch(`${API_URL}/collide`, {
-        method: "POST",
-        body: formData,
-      });
-      const blob = await res.blob();
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `sonic_collision_${mode}.mp3`;
-      a.click();
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div style={styles.root}>
       <div style={styles.container}>
-        {/* Header */}
+
         <div style={styles.header}>
           <h1 style={styles.title}>SONIC<span style={{ color: "#00d4ff" }}>COLLIDER</span></h1>
           <p style={styles.subtitle}>Upload two sounds. Collide them into something new.</p>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginTop: 8 }}>
+            <span style={{ color: "#555", fontSize: 13 }}>{session.user.email}</span>
+            <button
+              onClick={() => supabase.auth.signOut()}
+              style={{ padding: "4px 12px", background: "transparent", color: "#555", border: "1px solid #2a2a2a", borderRadius: 6, cursor: "pointer", fontSize: 12 }}
+            >
+              Log out
+            </button>
+          </div>
         </div>
 
-        {/* Upload zones */}
         <div style={styles.uploadRow}>
           <UploadZone label="Drop Sound A here" file={fileA} onFile={setFileA} />
           <div style={styles.plusSign}>+</div>
           <UploadZone label="Drop Sound B here" file={fileB} onFile={setFileB} />
         </div>
 
-        {/* Mode selector */}
         <div style={styles.section}>
           <div style={styles.sectionLabel}>COLLISION MODE</div>
           <div style={styles.modeRow}>
@@ -320,7 +299,6 @@ export default function App() {
           )}
         </div>
 
-        {/* Duration */}
         <div style={styles.section}>
           <div style={styles.sectionLabel}>DURATION: {duration}s</div>
           <input
@@ -332,7 +310,6 @@ export default function App() {
           />
         </div>
 
-        {/* Collide button */}
         <button
           onClick={handleCollide}
           disabled={!fileA || !fileB || loading}
@@ -345,12 +322,8 @@ export default function App() {
           {loading ? "COLLIDING..." : "⚡ COLLIDE"}
         </button>
 
-        {/* Error */}
-        {error && (
-          <div style={styles.error}>⚠ {error}</div>
-        )}
+        {error && <div style={styles.error}>⚠ {error}</div>}
 
-        {/* Result */}
         {resultUrl && (
           <div style={styles.result}>
             <div style={styles.sectionLabel}>COLLISION RESULT</div>
@@ -368,6 +341,7 @@ export default function App() {
             </div>
           </div>
         )}
+
       </div>
     </div>
   );
@@ -476,7 +450,7 @@ const styles = {
     border: "none",
     borderRadius: 12,
     marginBottom: 24,
-    transition: "opacity 0.2s, transform 0.1s",
+    transition: "opacity 0.2s",
   },
   error: {
     background: "rgba(255,60,60,0.1)",
@@ -548,6 +522,5 @@ const styles = {
     borderRadius: 6,
     cursor: "pointer",
     fontSize: 12,
-    transition: "all 0.15s",
   },
 };
