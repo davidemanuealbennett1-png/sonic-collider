@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 
-const API_URL = "http://127.0.0.1:5000";
+const API_URL = "https://sonic-collider-production.up.railway.app";
 const PRESETS = [
   { id: "bell", label: "🔔 Bell" },
   { id: "rain", label: "🌧 Rain" },
